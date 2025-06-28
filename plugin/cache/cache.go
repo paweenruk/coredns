@@ -182,6 +182,7 @@ func (w *ResponseWriter) RemoteAddr() net.Addr {
 
 // WriteMsg implements the dns.ResponseWriter interface.
 func (w *ResponseWriter) WriteMsg(res *dns.Msg) error {
+	res = res.Copy()
 	mt, _ := response.Typify(res, w.now().UTC())
 
 	// key returns empty string for anything we don't want to cache.
@@ -189,11 +190,12 @@ func (w *ResponseWriter) WriteMsg(res *dns.Msg) error {
 
 	msgTTL := dnsutil.MinimalTTL(res, mt)
 	var duration time.Duration
-	if mt == response.NameError || mt == response.NoData {
+	switch mt {
+	case response.NameError, response.NoData:
 		duration = computeTTL(msgTTL, w.minnttl, w.nttl)
-	} else if mt == response.ServerError {
+	case response.ServerError:
 		duration = w.failttl
-	} else {
+	default:
 		duration = computeTTL(msgTTL, w.minpttl, w.pttl)
 	}
 
